@@ -1,0 +1,51 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using FakersGame.Data
+@inject NavigationManager NavigationManager
+@namespace FakersGame.Components
+
+<h1>Waiting for everyone to be ready</h1>
+
+<ul>
+    @foreach (var player in _players)
+    {
+        <li style="color: @(player.IsReady ? "green" : "red");">@player.Name</li>
+    }
+</ul>
+
+
+@if (_player != null && !_player.IsReady)
+{
+    <button @onclick="ToggleReady">Ready!</button>
+}
+else
+{
+    <button @onclick="ToggleReady">Not ready anymore :(</button>
+}
+
+
+@code {
+    [Parameter] public HubConnection _hubConnection { get; set; }
+    private List<Player> _players = new List<Player>();
+    private Player? _player;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection.On("SetName", (Action)(async () => await UpdatePlayernames()));
+        _hubConnection.On("ToggleReady", (Action)(async () => await UpdatePlayernames()));
+        _hubConnection.On("PlayerDisconnected", (Action)(async () => await UpdatePlayernames()));
+        await UpdatePlayernames();
+    }
+
+    private async Task UpdatePlayernames()
+    {
+        _players = await _hubConnection.InvokeAsync<List<Player>>("GetPlayers");
+        _player = await _hubConnection.InvokeAsync<Player>("GetPlayer");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleReady()
+    {
+        await _hubConnection.InvokeAsync("ToggleReady");
+    }
+}
+

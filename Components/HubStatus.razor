@@ -1,0 +1,20 @@
+// HubConnectionStatus.razor
+@namespace FakersGame.Components
+@using FakersGame.Data
+
+@if (Status == HubConnectionStatus.Disconnected)
+{
+    <p>Disconnected</p>
+}
+else if (Status == HubConnectionStatus.Connecting)
+{
+    <p>Connecting...</p>
+}
+else
+{
+    <p>Connected</p>
+}
+
+@code {
+    [Parameter] public HubConnectionStatus Status { get; set; }
+}

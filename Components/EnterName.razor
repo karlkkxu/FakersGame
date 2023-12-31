@@ -1,0 +1,24 @@
+// EnterName.razor
+@namespace FakersGame.Components
+@using System.Text.RegularExpressions
+
+<h3>Enter your name</h3>
+
+<input @bind="name" />
+<button @onclick="SubmitName">Submit</button>
+
+@code {
+    [Parameter] public EventCallback<string> OnNameEntered { get; set; }
+
+    private string? name;
+
+    private void SubmitName()
+    {
+        if (string.IsNullOrEmpty(name) || name.Length > 21 || !Regex.IsMatch(name, "^[a-zA-Z0-9]*$"))
+        {
+            // Invalid input, do not submit
+            return;
+        }
+        OnNameEntered.InvokeAsync(name);
+    }
+}

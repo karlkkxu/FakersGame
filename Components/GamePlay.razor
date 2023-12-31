@@ -1,0 +1,22 @@
+// GamePlay.razor
+@namespace FakersGame.Components
+@using FakersGame.Data
+
+<h3>@_player.Name's turn</h3>
+
+<input @bind="answer" />
+<button @onclick="SubmitAnswer">Submit</button>
+
+
+@code {
+    [Parameter] public Player _player { get; set; }
+    [Parameter] public EventCallback<string> OnAnswer { get; set; }
+    [Parameter] public EventCallback<string> OnVote { get; set; }
+    private string? answer;
+
+    private async Task SubmitAnswer()
+    {
+        await OnAnswer.InvokeAsync(answer);
+    }
+    
+}

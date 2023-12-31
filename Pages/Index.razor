@@ -1,0 +1,98 @@
+﻿@page "/"
+@inject NavigationManager NavigationManager
+@implements IDisposable
+@using Microsoft.AspNetCore.SignalR.Client
+@using FakersGame.Data
+@using FakersGame.Components
+
+<HubStatus Status="@_connectionStatus" />
+
+@if (_connectionStatus == HubConnectionStatus.Connected)
+{
+    if (!_playerNamed)
+    {
+        <EnterName OnNameEntered="SetName" />
+    }
+    if (_playerNamed && !_gameStarted)
+    {
+        <Lobby _hubConnection="_connection" />
+    }
+    if (_gameStarted && !_roundStarted)
+    {
+        <Questions _hubConnection="_connection" />
+    }
+    if (_roundStarted)
+    {
+        <p>This is voting etc</p>
+    }
+}
+@if (_connectionStatus == HubConnectionStatus.Error)
+{
+    <p>@_connectionErrorMessage</p>
+}
+@if (_player == null)
+{
+    <p>Couldn't join the game</p>
+}
+
+@code {
+    private HubConnection _connection;
+    private HubConnectionStatus _connectionStatus = HubConnectionStatus.Disconnected;
+    private string _connectionErrorMessage = string.Empty;
+    private Player? _player; 
+    private bool _gameStarted = false;
+    private bool _roundStarted = false;
+    private bool _playerNamed = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _connection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/fakershub"))
+            .Build();
+
+        _connection.On("Error", (string message) =>
+        {
+            _connectionStatus = HubConnectionStatus.Error;
+            _connectionErrorMessage = message;
+        });
+        _connection.On("GameStarted", GameStarted);
+        _connection.On("RoundStarted", RoundStarted);
+
+        _connectionStatus = HubConnectionStatus.Connecting;
+        await _connection.StartAsync();
+        _connectionStatus = HubConnectionStatus.Connected;
+        _player = await _connection.InvokeAsync<Player>("GetPlayer");
+    }
+
+    private async Task SetName(string name)
+    {
+        await _connection.SendAsync("SetName", name);
+        _player = await _connection.InvokeAsync<Player>("GetPlayer");
+        if (_player.Name != null)
+        {
+            _playerNamed = true;
+        }
+        StateHasChanged();
+    }
+
+    private async Task PlayerAnswered(bool isFaker)
+    {
+        await _connection.SendAsync("PlayerAnswered", isFaker);
+    }
+
+    private async Task GameStarted()
+    {
+        _gameStarted = true;
+        await InvokeAsync(() => StateHasChanged());
+    }
+    private async Task RoundStarted()
+    {
+        _roundStarted = true;
+        await InvokeAsync(() => StateHasChanged());
+    }
+    
+    public void Dispose()
+    {
+        _ = _connection.DisposeAsync();
+    }
+}

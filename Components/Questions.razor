@@ -1,0 +1,55 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using FakersGame.Data
+@inject NavigationManager NavigationManager
+@namespace FakersGame.Components
+
+<h1>Answer these questions:</h1>
+
+@if (_player != null && _player.Questions.Length > 0 && _player.IsReady == false)
+{
+    <p bold>@roletext</p>
+    @for (int i = 0; i < _player.Questions.Length; i++)
+    {
+        <p>@_player.Questions[i]</p>
+        <input type="text" @bind="_player.Answers[i]" />
+    }
+}
+else
+{
+    <p>Waiting for questions...</p>
+}
+
+@if (_player != null && !_player.IsReady)
+{
+    <button @onclick="ToggleReady">Lock in answers!</button>
+}
+else
+{
+    <button disabled>That's it. You're done. Good luck</button>
+}
+
+@code {
+    [Parameter] public HubConnection _hubConnection { get; set; }
+    private List<Player> _players = new List<Player>();
+    private Player _player;
+    private string roletext;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection.On("ToggleReady", (Action)(async () => await UpdatePlayers()));
+        await _hubConnection.InvokeAsync("StartRound");
+        await UpdatePlayers();
+        _player = await _hubConnection.InvokeAsync<Player>("GetPlayer");
+        roletext = _player.IsFaker ? "You are the Faker" : "You are not the Faker";
+    }
+    private async Task UpdatePlayers()
+    {
+        _players = await _hubConnection.InvokeAsync<List<Player>>("GetPlayers");
+        StateHasChanged();
+    }    
+    private async Task ToggleReady()
+    {
+        await _hubConnection.InvokeAsync("ToggleReady");
+    }
+}
+
